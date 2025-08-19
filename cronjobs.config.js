@@ -6,7 +6,7 @@ module.exports = {
             autorestart: false,
             watch: false,
             max_memory_restart: '1G',
-            cron_restart: '*/15 * * * *',  // Runs every 15 minutes
+            cron_restart: '0 * * * *',  // Runs every hour
         }
     ]
 };
