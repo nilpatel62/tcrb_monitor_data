@@ -42,11 +42,12 @@ RADIUS_DEG = 0.02           # deg search radius (fallback path)
 
 current_directory = os.getcwd()
 env_path = current_directory+"/.env"
+print(f"env_path: {env_path}")
 load_dotenv(env_path)
 
 THRESHOLD = float(os.getenv("THRESHOLD"))
 print(f"THRESHOLD: {THRESHOLD}")
-CHECK_INTERVAL_SEC = 15 * 60
+CHECK_INTERVAL_SEC = 60 * 60
 
 RECIPIENTS = os.getenv("ALERT_RECIPIENTS").split(",")
 
