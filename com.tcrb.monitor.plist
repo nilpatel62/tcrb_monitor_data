@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.tcrb.monitor</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/neelpatel/Desktop/tcrb_monitor/tcrb-env/bin/python</string>
+        <string>/Users/neelpatel/Desktop/tcrb_monitor/tcrb_monitor_latest.py</string>
+        <string>--threshold</string>
+        <string>10.0</string>
+        <string>--interval</string>
+        <string>1.0</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/neelpatel/Desktop/tcrb_monitor</string>
+    <key>StandardOutPath</key>
+    <string>/Users/neelpatel/Desktop/tcrb_monitor/tcrb_monitor.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/neelpatel/Desktop/tcrb_monitor/tcrb_monitor.log</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>
