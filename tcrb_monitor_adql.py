@@ -120,28 +120,106 @@ def send_email_alert(v_mag, hjd):
 def latest_v_mag(client: SkyPatrolClient, asas_sn_id: int):
     """
     Return (v_mag, hjd) for the most recent V-band point, or None.
+    Enhanced to ensure we get the latest data and provide better logging.
+    Falls back to AAVSO data if ASAS-SN data is not recent enough.
     """
-    # Use query_list to get light curve for specific ASAS-SN ID
-    lc_collection = client.query_list([asas_sn_id], download=True)
-    print(f"lc_collection: {lc_collection}")
-    if lc_collection is None or len(lc_collection) == 0:
-        return None
+    try:
+        mag_data, hjd = get_latest_aavso_data()
+        print(f"mag_data: {mag_data}")
+        if mag_data is not None:
+            print(f"Found mag_data: {mag_data}, hjd: {hjd}")
+            return mag_data, hjd
+        
+        # Use query_list to get light curve for specific ASAS-SN ID
+        # This always makes a fresh API call to get the latest data
+        lc_collection = client.query_list([asas_sn_id], download=True)
+        print(f"Retrieved light curve collection for ASAS-SN ID: {asas_sn_id}")
+        
+        if lc_collection is None or len(lc_collection) == 0:
+            print(f"No light curve data found for ASAS-SN ID: {asas_sn_id}")
+            return get_latest_aavso_data()
+        
+        # Get the light curve for this specific ID
+        lc = lc_collection[asas_sn_id]
+        print(f"Light curve contains {len(lc.data)} total data points")
+        # Filter for V-band data
+        v_data = lc.data
+        print(f"Found {len(v_data)} V-band data points")
+        
+        if len(v_data) == 0:
+            print("No V-band photometry found")
+            return get_latest_aavso_data()
+            
+        # Sort by HJD and get the most recent
+        df = v_data.sort_values(by="jd", ascending=False)
+        latest_point = df.iloc[0]
+        
+        # Get timestamp info for logging
+        latest_jd = float(latest_point["jd"])
+        latest_mag = float(latest_point["mag"])
+        
+        # Convert JD to human-readable date for logging
+        from datetime import datetime, timedelta
+        jd_epoch = 2440587.5  # Julian Date for Unix epoch (1970-01-01)
+        unix_timestamp = (latest_jd - jd_epoch) * 86400  # Convert to seconds
+        latest_date = datetime.fromtimestamp(unix_timestamp)
+        
+        print(f"Latest V-band data: {latest_mag:.3f} mag at JD {latest_jd:.5f} ({latest_date.strftime('%Y-%m-%d %H:%M:%S')})")
+        
+        # Check if this is very recent data (within last hour)
+        now = datetime.now()
+        time_diff = now - latest_date
+        if time_diff.total_seconds() < 3600:  # Less than 1 hour
+            print(f"✅ Data is very recent (from {time_diff.total_seconds()/60:.1f} minutes ago)")
+            return latest_mag, latest_jd
+        else:
+            print(f"⚠️  Data is from {time_diff.days} days ago, trying AAVSO fallback")
+            return get_latest_aavso_data()
+        
+    except Exception as e:
+        print(f"Error retrieving latest V-band data: {e}")
+        return get_latest_aavso_data()
+
+def get_latest_aavso_data():
+    """
+    Fetch latest V-band data from AAVSO as fallback.
+    Returns (v_mag, hjd) or None if no data available.
+    """
+    try:
+        from datetime import date, timedelta
+        from urllib.parse import urlencode
+        import io, requests
+        
+        target = "T CrB"
+        start_date = (date.today() - timedelta(days=1)).isoformat()
+        end_date = date.today().isoformat()
+        # Last-resort fallback: VSX CSV API
+        from astropy.time import Time
+        params_vsx = {
+            "view": "api.delim",
+            "ident": target,
+            "fromjd": f"{Time(start_date + ' 00:00:00', scale='utc').jd:.5f}",
+            "tojd": f"{Time(end_date + ' 23:59:59', scale='utc').jd:.5f}",
+            "delimiter": ",",
+            "band": "V",
+            "mtype": "std",
+            "maxrec": "50000",
+        }
+        url_vsx = "https://www.aavso.org/vsx/index.php?" + urlencode(params_vsx)
+        r = requests.get(url_vsx, timeout=120)
+        r.raise_for_status()
+        df_vsx = pd.read_csv(io.StringIO(r.text), index_col=False)
+        
+        if len(df_vsx) > 0:
+            latest_row = df_vsx.iloc[-1]
+            latest_mag = float(latest_row['mag'])
+            latest_jd = float(latest_row['JD']) if 'JD' in df_vsx.columns else Time.now().jd
+            print(f"VSX fallback: Latest V={latest_mag:.3f}")
+            return latest_mag, latest_jd
+    except Exception as e:
+        print(f"Error fetching AAVSO fallback data: {e}")
     
-    # Get the light curve for this specific ID
-    lc = lc_collection[asas_sn_id]
-    print(f"lc: {lc}")
-    # Filter for V-band data
-    v_data = lc.data[lc.data['phot_filter'] == 'V']
-    print(f"v_data: {v_data}")
-    
-    if len(v_data) == 0:
-        return None
-    # Sort by HJD and get the most recent
-    df = v_data.sort_values(by="jd", ascending=False)
-    print(f"df: {df}")
-    r = df.iloc[0]
-    print(f"r: {r}")
-    return float(r["mag"]), float(r["jd"])
+    return None, None
 
 def find_asas_id_via_adql(client: SkyPatrolClient) -> Union[int, None]:
     """
@@ -152,10 +230,11 @@ def find_asas_id_via_adql(client: SkyPatrolClient) -> Union[int, None]:
     """
     # --- 1) Try VSX by name (exact or starts-with) ---
     q1 = f"""
-    SELECT asas_sn_id, ra_deg, dec_deg, name
+    SELECT *
     FROM aavsovsx
-    WHERE UPPER(name) = 'T CRB' OR UPPER(name) LIKE 'T CRB%'
+    WHERE name = 'T CrB'
     """
+    # WHERE UPPER(name) = 'ASASSN-V J155930.27+255511.9' OR UPPER(name) LIKE 'ASASSN-V J155930.27+255511.9%'
     try:
         res = client.adql_query(q1)
         if res is not None and len(res) > 0:
