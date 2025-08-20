@@ -95,7 +95,7 @@ def send_email_alert(v_mag, hjd):
 
     msg = EmailMessage()
     utc_now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%SZ")
-    subject = f"T CrB V-Band Alert: {v_mag:.2f} (HJD {hjd:.5f})"
+    subject = f"T CrB V-Band Alert: {v_mag:.3f} (HJD {hjd:.5f})"
     body = (
         f"T CrB dipped below V={THRESHOLD:.2f}.\n\n"
         f"Latest V: {v_mag:.3f}\n"

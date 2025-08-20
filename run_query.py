@@ -6,6 +6,9 @@ target = "T CrB"
 start_date = (date.today() - timedelta(days=1)).isoformat()  # e.g. 2025-08-19
 end_date   = date.today().isoformat()                        # e.g. 2025-08-20
 
+print(f"start_date: {start_date}")
+print(f"end_date: {end_date}")
+
 # App param semantics:
 # band=2 -> Johnson V, obstype=2 -> CCD   (same as the UI)
 base_params = {
