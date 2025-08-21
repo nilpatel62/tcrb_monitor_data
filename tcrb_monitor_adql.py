@@ -47,7 +47,7 @@ load_dotenv(env_path)
 
 THRESHOLD = float(os.getenv("THRESHOLD"))
 print(f"THRESHOLD: {THRESHOLD}")
-CHECK_INTERVAL_SEC = 60 * 60
+CHECK_INTERVAL_SEC = 30 * 60
 
 RECIPIENTS = os.getenv("ALERT_RECIPIENTS").split(",")
 
