@@ -201,7 +201,7 @@ def get_latest_aavso_data():
             "fromjd": f"{Time(start_date + ' 00:00:00', scale='utc').jd:.5f}",
             "tojd": f"{Time(end_date + ' 23:59:59', scale='utc').jd:.5f}",
             "delimiter": ",",
-            # "band": "V",
+            "band": "V",
             "mtype": "std",
             # "maxrec": "50000",
         }
